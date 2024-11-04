@@ -1,5 +1,6 @@
 from functools import wraps
 
+import pymongo
 from bson.codec_options import TypeRegistry, CodecOptions
 from faker import Faker
 from locust import User, between, task
@@ -8,7 +9,7 @@ from decimal_codec import DecimalCodec
 from settings import DEFAULTS
 
 import time
-import pymongo
+
 
 # singleton Mongo client
 CLIENT = pymongo.MongoClient(DEFAULTS['CLUSTER_URL'])

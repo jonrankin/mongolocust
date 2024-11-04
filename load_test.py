@@ -1,20 +1,25 @@
+import logging
 from locust import between
-
 from mongo_user import MongoUser, mongodb_task
 from settings import DEFAULTS
-
 import pymongo
 import random
+from bson import ObjectId
+# Number of cache entries for queries
+NAMES_TO_CACHE = 2000000
 
-# number of cache entries for queries
-NAMES_TO_CACHE = 1000
+# Configure root logger
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Configure Locust logger
+logger = logging.getLogger("locust")
+logger.setLevel(logging.INFO)
 
 class MongoSampleUser(MongoUser):
     """
     Generic sample mongodb workload generator
     """
-    # no delays between operations
+    # No delays between operations
     wait_time = between(0.0, 0.0)
 
     def __init__(self, environment):
@@ -26,76 +31,56 @@ class MongoSampleUser(MongoUser):
         Generate a new sample document
         """
         document = {
-            'first_name': self.faker.first_name(),
-            'last_name': self.faker.last_name(),
-            'address': self.faker.street_address(),
-            'city': self.faker.city(),
-            'total_assets': self.faker.pydecimal(min_value=100, max_value=1000, right_digits=2)
+            '_id': ObjectId(),
+            'id2': self.faker.pystr(min_chars=50, max_chars=100),
+            'id3': self.faker.pystr(min_chars=50, max_chars=100),
+            'payload': self.faker.pystr(min_chars=3710, max_chars=3710)
         }
         return document
-
-    @mongodb_task(weight=int(DEFAULTS['AGG_PIPE_WEIGHT']))
-    def run_aggregation_pipeline(self):
-        """
-        Run an aggregation pipeline on a secondary node
-        """
-        # count number of inhabitants per city
-        group_by = {
-            '$group': {
-                '_id': '$city',
-                'total_inhabitants': {'$sum': 1}
-            }
-        }
-
-        # rename the _id to city
-        set_columns = {'$set': {'city': '$_id'}}
-        unset_columns = {'$unset': ['_id']}
-
-        # sort by the number of inhabitants desc
-        order_by = {'$sort': {'total_inhabitants': pymongo.DESCENDING}}
-
-        pipeline = [group_by, set_columns, unset_columns, order_by]
-
-        # make sure we fetch everything by explicitly casting to list
-        # use self.collection instead of self.collection_secondary to run the pipeline on the primary
-        return list(self.collection_secondary.aggregate(pipeline))
 
     def on_start(self):
         """
         Executed every time a new test is started - place init code here
         """
-        # prepare the collection
-        index1 = pymongo.IndexModel([('first_name', pymongo.ASCENDING), ("last_name", pymongo.DESCENDING)],
-                                    name="idx_first_last")
-        self.collection, self.collection_secondary = self.ensure_collection(DEFAULTS['COLLECTION_NAME'], [index1])
-        self.name_cache = []
+        # Prepare the collection
+        # index1 = pymongo.IndexModel([('id1', pymongo.ASCENDING)], name="id1_asc")
+        self.collection, self.collection_secondary = self.ensure_collection(DEFAULTS['COLLECTION_NAME'])
+        if len(self.name_cache) < NAMES_TO_CACHE:        
+            cursor = self.collection.aggregate([ 
+                { '$sample': { 'size':  125000 } }
+            ])
+            self.name_cache.extend(list(cursor))
+        
 
     @mongodb_task(weight=int(DEFAULTS['INSERT_WEIGHT']))
     def insert_single_document(self):
         document = self.generate_new_document()
 
-        # cache the first_name, last_name tuple for queries
-        cached_names = (document['first_name'], document['last_name'])
-        if len(self.name_cache) < NAMES_TO_CACHE:
-            self.name_cache.append(cached_names)
-        else:
-            if random.randint(0, 9) == 0:
-                self.name_cache[random.randint(0, len(self.name_cache) - 1)] = cached_names
+        # #cache the ids
+        # cached_names = {
+        #     'id1': document['id1'],
+        #     'id2': document['id2'],
+        #     'id3': document['id3']
+        # }
+        # if len(self.name_cache) < NAMES_TO_CACHE:
+        #     self.name_cache.append(cached_names)
+        # else:
+        #     if random.randint(0, 9) == 0:
+        #         self.name_cache[random.randint(0, len(self.name_cache) - 1)] = cached_names
 
         self.collection.insert_one(document)
 
     @mongodb_task(weight=int(DEFAULTS['FIND_WEIGHT']))
     def find_document(self):
-        # at least one insert needs to happen
+        # At least one insert needs to happen
         if not self.name_cache:
             return
 
-        # find a random document using an index
-        cached_names = random.choice(self.name_cache)
-        self.collection.find_one({'first_name': cached_names[0], 'last_name': cached_names[1]})
+        # Find a random document using an index
+        cached_name = random.choice(self.name_cache)
+        self.collection.find_one({'_id': cached_name["_id"]})
 
-    @mongodb_task(weight=int(DEFAULTS['BULK_INSERT_WEIGHT']), batch_size=int(DEFAULTS['DOCS_PER_BATCH']))
-    def insert_documents_bulk(self):
-        self.collection.insert_many(
-            [self.generate_new_document() for _ in
-             range(int(DEFAULTS['DOCS_PER_BATCH']))])
+    # @mongodb_task(weight=int(DEFAULTS['BULK_INSERT_WEIGHT']), batch_size=int(DEFAULTS['DOCS_PER_BATCH']))
+    # def insert_documents_bulk(self):
+    #     self.collection.insert_many(
+    #         [self.generate_new_document() for _ in range(int(DEFAULTS['DOCS_PER_BATCH']))])
