@@ -2,7 +2,7 @@ import os
 
 DEFAULTS = {'DB_NAME': 'sample',
             'COLLECTION_NAME': 'documents',
-            'CLUSTER_URL': f'mongodb+srv://user:password@something.mongodb.net/sample?retryWrites=true&w=majority',
+            'CLUSTER_URL': f'mongodb+srv://<db_username>:<db_password>@demoenvironment.o42dx.mongodb.net/',
             'DOCS_PER_BATCH': 100,
             'INSERT_WEIGHT': 1,
             'FIND_WEIGHT': 3,
