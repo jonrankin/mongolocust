@@ -7,14 +7,14 @@ import sys
 
 DB_NAME = 'AUTO_HA'
 TTL_INDEX_NAME = 'date_created_ttl_index'
-
+RETRY_WRITES = False
 
 ####
 # Main start function
 ####
 def main():
     print('')
-    peform_inserts(DEFAULTS['CLUSTER_URL'], True)
+    peform_inserts(DEFAULTS['CLUSTER_URL'], RETRY_WRITES)
 
 def peform_inserts(uri, retry):
     mongodb_url = uri
