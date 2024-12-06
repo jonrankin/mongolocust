@@ -102,44 +102,6 @@ class MetricsLocust(User):
     def get_time(self):
         return time.time()
 
-    @task(0)
-    def _insert_one(self):
-        global _SCHEMA, _QUEUE, _INSSCHEMA
-
-        _ = Field(locale=Locale.EN)
-
-        name = "Insert One"
-
-        tic = self.get_time()
-        try:
-            self.coll.insert_one(_INSSCHEMA.create()[0])
-            events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0)
-        except Exception as e:
-            events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0, exception=e)
-            time.sleep(5)
-    
-
-
-    @task(0)
-    def _find_one(self):
-        global _SCHEMA, _QUEUE
-
-        _ = Field(locale=Locale.EN)
-
-        name = "Find One"
-
-        id_to_find = random.randint(1,10000000)
-        uid = uuid.uuid5(uuid.NAMESPACE_DNS, "{}".format({id_to_find:"012"}))
-
-        tic = self.get_time()
-        try:
-            self.coll.find_one({"_id": str(uid)})
-            events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0)
-        except Exception as e:
-            events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0, exception=e)
-            time.sleep(5)
-    
-
     @task(1)
     def _bulk_insert(self):
         global _SCHEMA, _QUEUE

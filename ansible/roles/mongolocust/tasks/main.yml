@@ -12,6 +12,11 @@
       - python3-venv
     state: present
 
+- name: Delete /opt/mongolocust directory
+  ansible.builtin.file:
+    path: /opt/mongolocust
+    state: absent
+    
 - name: Clone mongolocust repository
   ansible.builtin.git:
     repo: "{{ repo_url }}"
@@ -33,7 +38,8 @@
   ansible.builtin.copy:
     src: "files/settings.py"
     dest: "{{ repo_dest }}/settings.py"
-    mode: '0644'
+    mode: '0777'
+
 
 # - name: Get the first host in the inventory
 #   set_fact:
