@@ -1,0 +1,87 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install dependencies
+  ansible.builtin.package:
+    name:
+      - git
+      - python3
+      - python3-pip
+      - python3-venv
+    state: present
+
+- name: Clone mongolocust repository
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ repo_dest }}"
+    update: yes
+
+- name: Create a virtual environment
+  ansible.builtin.command:
+    cmd: python3 -m venv venv
+    chdir: "{{ repo_dest }}"
+    creates: "{{ repo_dest }}/venv"
+
+- name: Install requirements in the virtual environment
+  ansible.builtin.command:
+    cmd: "{{ repo_dest }}/venv/bin/pip install -r requirements.txt"
+    chdir: "{{ repo_dest }}"
+
+- name: Copy settings.py
+  ansible.builtin.copy:
+    src: "files/settings.py"
+    dest: "{{ repo_dest }}/settings.py"
+    mode: '0644'
+
+# - name: Get the first host in the inventory
+#   set_fact:
+#     master_host: "{{ groups['all'][0] }}"
+#   run_once: true
+
+# - name: Gather the master host IP
+#   ansible.builtin.setup:
+#   delegate_to: "{{ master_host }}"
+#   when: inventory_hostname == master_host
+
+# - name: Set master IP address as a fact
+#   set_fact:
+#     master_ip: "{{ hostvars[master_host]['ansible_default_ipv4']['address'] }}"
+#   run_once: true
+
+# - name: Configure Locust as master or worker
+#   block:
+#     - name: Configure master
+#       ansible.builtin.copy:
+#         dest: "{{ repo_dest }}/master.env"
+#         content: |
+#           LOCUST_MODE=master
+#           LOCUST_MASTER_BIND_HOST={{ master_ip }}
+#       when: inventory_hostname == master_host
+
+#     - name: Configure worker
+#       ansible.builtin.copy:
+#         dest: "{{ repo_dest }}/worker.env"
+#         content: |
+#           LOCUST_MODE=worker
+#           LOCUST_MASTER_HOST={{ master_ip }}
+#       when: inventory_hostname != master_host
+
+# - name: Start Locust master or worker
+#   block:
+#     - name: Start Locust master
+#       ansible.builtin.command:
+#         cmd: |
+#           nohup {{ repo_dest }}/venv/bin/locust --master -f load_test.py &
+#       args:
+#         chdir: "{{ repo_dest }}"
+#       when: inventory_hostname == master_host
+
+#     - name: Start Locust worker
+#       ansible.builtin.command:
+#         cmd: |
+#           nohup {{ repo_dest }}/venv/bin/locust --worker --master-host={{ master_ip }} -f load_test.py &
+#       args:
+#         chdir: "{{ repo_dest }}"
+#       when: inventory_hostname != master_host

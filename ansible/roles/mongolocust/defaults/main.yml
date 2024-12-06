@@ -1,0 +1,4 @@
+---
+repo_url: "https://github.com/jonrankin/mongolocust"
+repo_dest: "/opt/mongolocust"
+python_version: "3.9"  # Python version to use

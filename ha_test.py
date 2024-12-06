@@ -19,7 +19,7 @@ def main():
 def peform_inserts(uri, retry):
     mongodb_url = uri
     print(f'Connecting to:\n {mongodb_url}\n')
-    connection = pymongo.MongoClient(mongodb_url, retryWrites=retry, retryReads=retry)
+    connection = pymongo.MongoClient(mongodb_url, retryWrites=retry, retryReads=retry, readPreference='nearest')
     db = connection[DEFAULTS['DB_NAME']]
     db.records.drop()
     db.records.create_index([('val', pymongo.DESCENDING)])

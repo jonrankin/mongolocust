@@ -78,8 +78,9 @@ class MongoSampleUser(MongoUser):
 
         # Find a random document using an index
         cached_name = random.choice(self.name_cache)
-        self.collection.find_one({'_id': cached_name["_id"]})
-
+        findOne = self.collection.find_one({'_id': cached_name["_id"]})
+        if findOne:
+            print(findOne)
     # @mongodb_task(weight=int(DEFAULTS['BULK_INSERT_WEIGHT']), batch_size=int(DEFAULTS['DOCS_PER_BATCH']))
     # def insert_documents_bulk(self):
     #     self.collection.insert_many(

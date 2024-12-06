@@ -12,7 +12,7 @@ import time
 
 
 # singleton Mongo client
-CLIENT = pymongo.MongoClient(DEFAULTS['CLUSTER_URL'])
+CLIENT = pymongo.MongoClient(DEFAULTS['CLUSTER_URL'], readPreference='nearest')
 
 
 def mongodb_task(weight=1, batch_size=1):

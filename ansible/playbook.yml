@@ -1,0 +1,5 @@
+---
+- hosts: region1
+  become: yes
+  roles:
+    - mongolocust

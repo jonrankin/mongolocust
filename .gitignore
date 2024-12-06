@@ -137,3 +137,6 @@ settings.py
 terraform.tfstate*
 terraform.tfvars
 settings.py
+
+#ansible
+*.ini
