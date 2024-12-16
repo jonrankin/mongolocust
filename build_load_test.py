@@ -38,12 +38,13 @@ _ = Field(locale=Locale.EN)
 _FS = Fieldset(locale=Locale.EN)
 _SCHEMA = None
 _INSSCHEMA = None
+COUNT = 0
 
 class MetricsLocust(User):
     client, coll, bulk_size = None, None, None
 
     def __init__(self, parent):
-        global _, _FS, _SCHEMA, _WORKER_ID, _HOST, _CLIENT, _SRV, _INSSCHEMA
+        global _, _FS, _SCHEMA, _WORKER_ID, _HOST, _CLIENT, _SRV, _INSSCHEMA, COUNT
 
         super().__init__(parent)
 
@@ -76,7 +77,7 @@ class MetricsLocust(User):
                         '_id': "{}".format(uuid.uuid5(uuid.NAMESPACE_DNS, "{}".format({_("increment")+self.chunk_size*(_WORKER_ID):"012"}))),
                         'id2': _("uuid"),
                         'id3': _("uuid"),
-                        'payload': _("random.randbytes", n=3710)
+                        'payload': _("random.randbytes", n=3780)
                     }
                         
                         ,
@@ -88,7 +89,7 @@ class MetricsLocust(User):
                         '_id': "{}".format(uuid.uuid5(uuid.NAMESPACE_DNS, "{}".format({random.randint(100000000,10000000000000)+self.chunk_size*(_WORKER_ID):"012"}))),
                         'id2': _("uuid"),
                         'id3': _("uuid"),
-                        'payload': _("random.randbytes", n=3710)
+                        'payload': _("random.randbytes", n=3780)
                     }
                         
                         ,
@@ -104,16 +105,31 @@ class MetricsLocust(User):
 
     @task(1)
     def _bulk_insert(self):
-        global _SCHEMA, _QUEUE
+        global _SCHEMA, _QUEUE, COUNT
 
         _ = Field(locale=Locale.EN)
+        
 
         name = "Bulk Insert"
-
         tic = self.get_time()
-        try:
-            self.coll.insert_many(_SCHEMA.create(),ordered=False)
-            events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0)
-        except Exception as e:
-            events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0, exception=e)
-            time.sleep(5)
+        if COUNT >= self.chunk_size:                 
+                nm = f"Worker {_WORKER_ID} has reached the chunk size of {self.chunk_size}"
+                events.request.fire(request_type="mlocust", name=nm, response_time=(self.get_time() - tic) * 1000, response_length=0)
+                time.sleep(100)
+
+        else:
+            print("-----------------")
+            print("Worker ID:", _WORKER_ID) 
+            print("COUNT:", COUNT)
+            print("CHUNK SIZE: ",self.chunk_size)
+            print("-----------------")
+            try:
+                self.coll.insert_many(_SCHEMA.create(),ordered=False)
+                print("-----------------")
+                print(f"Worker {_WORKER_ID} has processed {COUNT} to {COUNT+self.bulk_size} records")
+                print("-----------------")
+                COUNT += self.bulk_size
+                events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0)
+            except Exception as e:
+                events.request.fire(request_type="mlocust", name=name, response_time=(self.get_time() - tic) * 1000, response_length=0, exception=e)
+                time.sleep(5)
